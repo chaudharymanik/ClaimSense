@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Material Symbols default rendering, per Design/plum_claimsense mockups */
+.material-symbols-outlined {
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
+}
+.material-symbols-outlined.filled {
+  font-variation-settings:
+    "FILL" 1,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
+}
+
+/* Shared surface/divider helpers used across the ClaimSense screens */
+.hairline-divider {
+  border-color: rgb(29 24 51 / 0.1);
+}
+.card-surface {
+  @apply bg-surface-container-lowest border border-on-secondary-fixed/10 rounded-lg;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-background text-on-background antialiased;
+}

@@ -1,0 +1,27 @@
+{
+  "_comment": "Simulated employee roster for TechCorp Solutions Pvt Ltd (policy_terms.json's policy_holder). No real HR/member database was provided with this assignment — see docs/ASSUMPTIONS.md #11. This covers every member_id used across test_cases.json, docs/TEST_SCENARIOS.md, and the automated test suite's default fixtures, so MEMBER_NOT_COVERED is genuinely enforced (an unlisted ID is really rejected) without breaking any existing case.",
+  "members": [
+    { "member_id": "EMP001", "name": "Rajesh Kumar" },
+    { "member_id": "EMP002", "name": "Priya Singh" },
+    { "member_id": "EMP003", "name": "Amit Verma" },
+    { "member_id": "EMP004", "name": "Sneha Reddy" },
+    { "member_id": "EMP005", "name": "Vikram Joshi" },
+    { "member_id": "EMP006", "name": "Kavita Nair" },
+    { "member_id": "EMP007", "name": "Suresh Patil" },
+    { "member_id": "EMP008", "name": "Ravi Menon" },
+    { "member_id": "EMP009", "name": "Anita Desai" },
+    { "member_id": "EMP010", "name": "Deepak Shah" },
+    { "member_id": "EMP011", "name": "Neha Kapoor" },
+    { "member_id": "EMP012", "name": "Arjun Mehta" },
+    { "member_id": "EMP013", "name": "Sanjay Kumar" },
+    { "member_id": "EMP014", "name": "Kiran Rao" },
+    { "member_id": "EMP015", "name": "Meera Iyer" },
+    { "member_id": "EMP016", "name": "Rohan Das" },
+    { "member_id": "EMP017", "name": "Pooja Shah" },
+    { "member_id": "EMP018", "name": "Vivek Nair" },
+    { "member_id": "EMP019", "name": "Anjali Verma" },
+    { "member_id": "EMP020", "name": "Farhan Ali" },
+    { "member_id": "EMP021", "name": "Priya Kapoor" },
+    { "member_id": "EMP999", "name": "Test Member" }
+  ]
+}

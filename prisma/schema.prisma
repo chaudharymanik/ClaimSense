@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum ClaimStatus {
+  PROCESSING
+  APPROVED
+  REJECTED
+  PARTIAL
+  MANUAL_REVIEW
+}
+
+model Claim {
+  id             String      @id @default(cuid())
+  memberId       String
+  memberName     String
+  memberJoinDate DateTime?
+  treatmentDate  DateTime
+  claimAmount    Int
+  hospital       String?
+  cashlessRequest Boolean    @default(false)
+  documentText   String?
+  documentFileUrl String?
+  status         ClaimStatus @default(PROCESSING)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  extractedData ExtractedData?
+  decision      Decision?
+
+  @@index([memberId])
+  @@index([status])
+}
+
+model ExtractedData {
+  id                 String   @id @default(cuid())
+  claimId            String   @unique
+  claim              Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  doctorName         String?
+  doctorReg          String?
+  diagnosis          String?
+  medicinesPrescribed Json?
+  procedures         Json?
+  testsPrescribed    Json?
+  billedItems        Json?
+  extractionConfidence Float
+  createdAt          DateTime @default(now())
+}
+
+model Decision {
+  id               String   @id @default(cuid())
+  claimId          String   @unique
+  claim            Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  decision         ClaimStatus
+  approvedAmount   Int?
+  deductions       Json?
+  rejectionReasons Json?
+  rejectedItems    Json?
+  flags            Json?
+  cashlessApproved Boolean?
+  networkDiscount  Int?
+  ruleTrail        Json
+  confidenceScore  Float
+  notes            String?
+  nextSteps        String?
+  createdAt        DateTime @default(now())
+}
