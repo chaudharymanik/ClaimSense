@@ -82,28 +82,29 @@ decision itself:
 /prisma
   schema.prisma            → Claim, ExtractedData, Decision tables + migrations
 
-/data                      → policy_terms.json, adjudication_rules.md — loaded at
+/data                      → policy_terms.json, member_roster.json — loaded at
                               runtime, not hardcoded into engine logic
 
 /tests
-  rules-engine.test.ts      → all 10 required cases + 19 supplementary
+  rules-engine.test.ts      → all 10 required cases + supplementary coverage
   llm-extraction.test.ts     → mocked extraction error-handling paths
   fixtures/test_cases.json    → the provided fixture, unmodified
 
 /components                 → shared UI (TopNav, StatusPill, DecisionBreakdown,
-                               AskAboutDecision)
-
-/Design                      → source-of-truth mockups (see docs/ASSUMPTIONS.md
-                                and Memory.md for how inconsistencies between them
-                                were reconciled)
+                               AskAboutDecision, LoginForm)
 ```
 
-## Deployment plan (not yet deployed — see README)
+## Deployment
 
-1. Push to GitHub.
-2. Connect the repo to Vercel; set `DATABASE_URL`, `DIRECT_URL`,
-   `GEMINI_API_KEY` as environment variables.
-3. `npx prisma migrate deploy` against the Supabase database (already
-   provisioned and migrated for local development).
-4. Re-run the 10 required test cases against the deployed URL before
-   considering the submission final.
+Deployed on Vercel, connected to the same Supabase Postgres database used
+for local development. The build step (`package.json`'s `build` script)
+runs `prisma migrate deploy` before `next build`, so schema migrations
+apply automatically on every deploy — no manual migration step needed.
+
+Required environment variables (set in Vercel's project settings):
+`DATABASE_URL`, `DIRECT_URL`, `GEMINI_API_KEY`, `AUTH_SEED`. The app fails
+to start with a clear error if any are missing (`instrumentation.ts`).
+
+TC001 was re-run directly against the deployed URL after going live,
+confirming the full pipeline (Gemini extraction → rules engine →
+Postgres → UI) produces the same result in production as locally.

@@ -110,9 +110,10 @@ originally-planned one.
 
 ## Deployment
 
-Not yet deployed. Planned: Vercel (frontend/API) + the existing Supabase
-database. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#deployment-plan-not-yet-deployed--see-readme)
-for the exact steps.
+Deployed on Vercel: **[claim-sense-sand.vercel.app](https://claim-sense-sand.vercel.app)**.
+The site is gated by a login screen — see "Known limitations" below for how
+the demo password works. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#deployment)
+for the deployment setup.
 
 ## Known limitations
 
