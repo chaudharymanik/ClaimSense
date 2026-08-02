@@ -197,7 +197,7 @@ notable ones:
   detection), not a trained model.
 - `LATE_SUBMISSION` and `DATE_MISMATCH` are implemented and unit-tested but
   not wired to real submission timestamps/per-document dates — see
-  `docs/ASSUMPTIONS.md` #16-17 for why (short version: this project's test
+  `docs/ASSUMPTIONS.md` #14-15 for why (short version: this project's test
   data is intentionally dated 2024 to match `test_cases.json`, so
   auto-computing against the real current date would break every test case
   in the project).

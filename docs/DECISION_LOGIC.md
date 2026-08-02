@@ -62,7 +62,7 @@ flowchart TD
    the per-claim limit (e.g. an excluded ₹8,000 weight-loss claim) is
    rejected for the exclusion, not the limit.
 3. **Hard limits cannot be exceeded** — but only apply to the *gross* amount
-   when nothing was excluded (see `docs/ASSUMPTIONS.md` #5 for why: two of
+   when nothing was excluded (see `docs/ASSUMPTIONS.md` #3 for why: two of
    the ten provided test cases exceed the per-claim limit yet are correctly
    partial/rejected for their own item-level reason instead).
 4. **Medical necessity is mandatory** — the deterministic check (diagnosis
@@ -97,4 +97,4 @@ overturned appeal changes `Claim.status` but never re-runs or rewrites the
 engine's own decision above — the diagram describes how the *original*
 automated decision was reached, and that reasoning trail stays intact and
 visible regardless of what an appeal later does to the claim's outward
-status. See `docs/ASSUMPTIONS.md` #22-25 for the appeal-specific rules.
+status. See `docs/ASSUMPTIONS.md` #19-22 for the appeal-specific rules.

@@ -34,7 +34,7 @@ flowchart LR
 | Styling | Tailwind CSS v3, ported design tokens | Pixel-matches the `Design/` mockups; v3's JS config could be copied from the mockups verbatim (v4's CSS-first config would need manual re-translation) |
 | Database | Supabase (Postgres) | Free tier, hosted, no infra to manage |
 | ORM | Prisma v6 | Type-safe schema/migrations |
-| LLM | Google Gemini (`@google/genai`) | Genuinely free tier (no card), multimodal (image/PDF), and — critically — a *cloud* API reachable from a deployed backend, unlike a local model. See `docs/ASSUMPTIONS.md` #2 for why this isn't the originally-planned commercial LLM API. |
+| LLM | Google Gemini (`@google/genai`) | Genuinely free tier (no card), multimodal (image/PDF), and — critically — a *cloud* API reachable from a deployed backend, unlike a local model. |
 | Validation | Zod | Every LLM response and every API request body is schema-validated before touching the rules engine or the database |
 
 ## The one architectural rule everything else follows
@@ -53,8 +53,7 @@ decision itself:
    as input, same shape whether it came from pasted text or a photographed
    document.
 2. **Advisory signals** — the medical-necessity opinion (adjusts confidence,
-   never rejects — see `docs/ASSUMPTIONS.md` #20 for a real bug this
-   distinction fixed) and the "Ask about this decision" explanations (read
+   never rejects) and the "Ask about this decision" explanations (read
    the already-final decision, never write to it).
 
 **The policy itself is admin-editable (bonus feature) without breaking this

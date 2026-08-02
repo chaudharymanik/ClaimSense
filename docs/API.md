@@ -62,7 +62,7 @@ returns it — all in one request/response cycle.
 
 `previous_claims_same_day` is intentionally **not** a request field — it's
 computed server-side from actual claim history for the same member and
-treatment date (see `docs/ASSUMPTIONS.md` #19).
+treatment date (see `docs/ASSUMPTIONS.md` #17).
 
 ### Response — `201 Created`
 
@@ -140,8 +140,7 @@ decision (including the full rule trail), and its appeal, if one exists.
 
 Bonus feature: ask a natural-language question about one claim's already-
 finalized decision. Grounded entirely in that claim's stored decision/trail;
-cannot alter the decision (see `docs/ASSUMPTIONS.md` #20 — the LLM never
-decides, and this endpoint doesn't write to the database at all).
+cannot alter the decision — it never writes to the database at all.
 
 **Request:** `{ "question": "Why wasn't the full amount approved?" }` (max 500 chars)
 
