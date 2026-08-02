@@ -69,16 +69,16 @@ export default async function ManualReviewQueuePage() {
                   href={`/claims/${claim.id}`}
                   className="grid grid-cols-12 gap-unit px-padding-card py-stack-md border-b border-on-secondary-fixed/10 last:border-b-0 hover:bg-surface-bright transition-colors items-center group cursor-pointer"
                 >
-                  <div className="col-span-3 lg:col-span-2">
-                    <span className="font-data-mono text-data-mono text-on-secondary-fixed">
+                  <div className="col-span-3 lg:col-span-2 min-w-0">
+                    <span className="font-data-mono text-data-mono text-on-secondary-fixed truncate block">
                       #{claim.id.slice(-8).toUpperCase()}
                     </span>
                   </div>
-                  <div className="col-span-4 lg:col-span-3">
-                    <div className="font-body-md text-body-md text-on-secondary-fixed font-medium">
+                  <div className="col-span-4 lg:col-span-3 min-w-0">
+                    <div className="font-body-md text-body-md text-on-secondary-fixed font-medium truncate">
                       {claim.memberName}
                     </div>
-                    <div className="font-body-sm text-body-sm text-secondary">ID: {claim.memberId}</div>
+                    <div className="font-body-sm text-body-sm text-secondary truncate">ID: {claim.memberId}</div>
                   </div>
                   <div className="col-span-5 lg:col-span-4 flex flex-wrap gap-2 items-center">
                     {flags.length === 0 && (

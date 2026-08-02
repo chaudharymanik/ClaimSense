@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { adjudicate } from "@/lib/rules-engine/engine";
+import { POLICY } from "@/lib/rules-engine/policy";
 import type { ClaimInput } from "@/lib/types";
 import testCasesFixture from "./fixtures/test_cases.json";
 
@@ -345,5 +346,25 @@ describe("rules engine — supplementary coverage for codes/categories/scenarios
     expect(result.decision).toBe("MANUAL_REVIEW");
     expect(result.approved_amount).toBeNull();
     expect(result.flags).toContain("Billed items total exceeds submitted claim amount");
+  });
+
+  it("uses the admin-editable policy when one is passed in, instead of the static default", () => {
+    // Bonus feature: admin policy configuration (lib/db/policyConfig.ts).
+    // adjudicate() must actually honor an overridden policy, not just
+    // accept the parameter and ignore it — confirmed by tightening the
+    // per-claim limit below what the static POLICY allows and checking the
+    // same claim that would pass with the default now correctly rejects.
+    const claim = baseClaim({ claim_amount: 4000, documents: { prescription: baseClaim().documents.prescription, bill: { consultation_fee: 4000 } } });
+
+    const withDefaultPolicy = adjudicate(claim);
+    expect(withDefaultPolicy.rejection_reasons).not.toContain("PER_CLAIM_EXCEEDED");
+
+    const tightenedPolicy = {
+      ...POLICY,
+      coverage_details: { ...POLICY.coverage_details, per_claim_limit: 1000 },
+    };
+    const withOverriddenPolicy = adjudicate(claim, { policy: tightenedPolicy });
+    expect(withOverriddenPolicy.decision).toBe("REJECTED");
+    expect(withOverriddenPolicy.rejection_reasons).toContain("PER_CLAIM_EXCEEDED");
   });
 });

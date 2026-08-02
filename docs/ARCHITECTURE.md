@@ -53,21 +53,45 @@ decision itself:
    as input, same shape whether it came from pasted text or a photographed
    document.
 2. **Advisory signals** — the medical-necessity opinion (adjusts confidence,
-   never rejects — see `docs/ASSUMPTIONS.md` #14 for a real bug this
+   never rejects — see `docs/ASSUMPTIONS.md` #20 for a real bug this
    distinction fixed) and the "Ask about this decision" explanations (read
    the already-final decision, never write to it).
+
+**The policy itself is admin-editable (bonus feature) without breaking this
+rule.** `adjudicate()` takes `policy` as an optional parameter — every
+existing test omits it and gets the static `POLICY` default unchanged;
+`lib/api/processClaim.ts` (the real runtime path) fetches the current
+value from the database via `lib/db/policyConfig.ts` and passes it in
+explicitly. The engine function itself still does zero I/O — the fetching
+happens one layer up, outside `lib/rules-engine/` entirely.
 
 ## Folder structure
 
 ```
 /app
+  /api/auth/login         → POST (demo session, public)
+  /api/auth/logout         → POST (clears both the demo AND admin session cookies)
   /api/claims            → POST (submit), GET (list)
-  /api/claims/[id]        → GET (detail)
+  /api/claims/[id]        → GET (detail, incl. appeal if one exists)
   /api/claims/[id]/ask     → POST (AI explanation, bonus feature)
-  /claims                → dashboard (stats, decision breakdown, recent claims)
+  /api/claims/[id]/appeal  → POST (submit an appeal, bonus feature)
+  /api/admin/login          → POST (separate admin credential, on top of the demo session)
+  /api/admin/logout          → POST (drops only the admin credential, back to the demo session)
+  /api/admin/appeals          → GET (list, admin-only)
+  /api/admin/appeals/[id]/resolve → POST (uphold/overturn, admin-only)
+  /api/admin/policy             → GET/PUT (admin-editable policy config)
+  /claims                → dashboard (stats, decision breakdown, AI accuracy
+                            metrics, recent claims)
   /claims/new              → submission form (text paste + file upload)
-  /claims/[id]               → claim detail (data, confidence, rule trail, Q&A)
+  /claims/[id]               → claim detail (data, confidence, rule trail, appeal, Q&A)
   /claims/review               → manual review queue (bonus feature)
+  /claims/coverage               → coverage guide, reads the live admin-editable
+                                    policy (not a static import — see below)
+  /admin                          → admin home (links to appeals, policy config)
+  /admin/appeals                    → review/resolve appeals
+  /admin/policy                       → edit policy configuration
+  /admin/login                          → separate admin login (same visual
+                                          design as /login, different credential)
 
 /lib
   /rules-engine           → pure, deterministic. One file per adjudication_rules.md
@@ -75,24 +99,43 @@ decision itself:
                              medicalNecessity, fraud, process, confidence, engine
   /llm                     → Gemini extraction (text + vision), explanation Q&A,
                               Zod schemas, shared client
-  /api                     → request validation + orchestration (processClaim.ts)
-  /db                      → Prisma client singleton
+  /api                     → request validation + orchestration (processClaim.ts),
+                              policySchema.ts (admin policy Zod validation)
+  /db                      → Prisma client singleton, policyConfig.ts (the one
+                              place that reads/writes the admin-editable policy)
+  auth.ts                  → demo + admin session/password logic
   types.ts                 → shared types (ClaimInput, Decision, RejectionCode, ...)
 
 /prisma
-  schema.prisma            → Claim, ExtractedData, Decision tables + migrations
+  schema.prisma            → Claim, ExtractedData, Decision, Appeal, PolicyConfig
+                              tables + migrations
 
-/data                      → policy_terms.json, member_roster.json — loaded at
-                              runtime, not hardcoded into engine logic
+/data                      → policy_terms.json, member_roster.json — the
+                              original values; PolicyConfig's DB row is
+                              seeded from this but is what's actually live
+                              once anyone edits it via /admin/policy
 
 /tests
-  rules-engine.test.ts      → all 10 required cases + supplementary coverage
+  rules-engine.test.ts      → all 10 required cases + supplementary coverage,
+                               incl. a test confirming adjudicate() actually
+                               honors an overridden policy, not just the default
   llm-extraction.test.ts     → mocked extraction error-handling paths
   fixtures/test_cases.json    → the provided fixture, unmodified
 
 /components                 → shared UI (TopNav, StatusPill, DecisionBreakdown,
-                               AskAboutDecision, LoginForm)
+                               AiAccuracyMetrics, AskAboutDecision, AppealSection,
+                               LoginForm, AdminLoginForm, LogoutButton, AdminLogoutButton)
 ```
+
+### Two independent auth layers, not one
+
+`proxy.ts` gates every route with the regular demo-login session. Routes
+under `/admin/*` and `/api/admin/*` additionally require a second,
+completely separate session (`ADMIN_PASSWORD`, its own cookie, its own
+stateless HMAC check in `lib/auth.ts`) — knowing the daily rotating demo
+password (shown openly on `/login`) grants no path to policy configuration
+or appeal resolution. See README's Known Limitations for what this
+does and doesn't protect against.
 
 ## Deployment
 
@@ -102,8 +145,9 @@ runs `prisma migrate deploy` before `next build`, so schema migrations
 apply automatically on every deploy — no manual migration step needed.
 
 Required environment variables (set in Vercel's project settings):
-`DATABASE_URL`, `DIRECT_URL`, `GEMINI_API_KEY`, `AUTH_SEED`. The app fails
-to start with a clear error if any are missing (`instrumentation.ts`).
+`DATABASE_URL`, `DIRECT_URL`, `GEMINI_API_KEY`, `AUTH_SEED`,
+`ADMIN_PASSWORD`. The app fails to start with a clear error if any are
+missing (`instrumentation.ts`).
 
 TC001 was re-run directly against the deployed URL after going live,
 confirming the full pipeline (Gemini extraction → rules engine →

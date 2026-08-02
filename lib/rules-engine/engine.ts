@@ -5,7 +5,7 @@ import type {
   RejectionCode,
   RuleTrailItem,
 } from "@/lib/types";
-import { POLICY } from "./policy";
+import { POLICY, type PolicyTerms } from "./policy";
 import { checkProcess } from "./process";
 import { checkEligibility } from "./eligibility";
 import { checkDocuments } from "./documents";
@@ -66,13 +66,19 @@ function tierForExclusionCode(code: RejectionCode): number {
  *
  * `medicalNecessitySignal` is an optional advisory input from the LLM
  * extraction layer (wired in Phase 2); omitted entirely in Phase 1 tests.
+ *
+ * `policy` defaults to the static POLICY constant — every existing test
+ * calls adjudicate() without it and keeps working unchanged. The real
+ * runtime path (lib/api/processClaim.ts) fetches the current admin-editable
+ * policy from the database and passes it explicitly, so this function
+ * itself still does zero I/O and stays a pure function either way.
  */
 export function adjudicate(
   claim: ClaimInput,
-  options?: { claimId?: string; medicalNecessitySignal?: MedicalNecessitySignal },
+  options?: { claimId?: string; medicalNecessitySignal?: MedicalNecessitySignal; policy?: PolicyTerms },
 ): Decision {
   const claimId = options?.claimId ?? newClaimId();
-  const policy = POLICY;
+  const policy = options?.policy ?? POLICY;
   const trail: RuleTrailItem[] = [];
 
   const process = checkProcess(claim, policy);

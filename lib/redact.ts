@@ -1,4 +1,4 @@
-const SECRET_ENV_VARS = ["GEMINI_API_KEY", "DATABASE_URL", "DIRECT_URL"] as const;
+const SECRET_ENV_VARS = ["GEMINI_API_KEY", "DATABASE_URL", "DIRECT_URL", "AUTH_SEED", "ADMIN_PASSWORD"] as const;
 
 /**
  * Strips any live secret value out of a string before it can reach a user —

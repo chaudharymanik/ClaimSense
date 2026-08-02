@@ -72,10 +72,29 @@ flowchart TD
    gate is the final step of every path, so even a claim that clears every
    other check can still end up in `MANUAL_REVIEW` if the system isn't sure.
 6. **Extracted bill amounts are never trusted over what the claimant
-   submitted** — added during a security review (`docs/THREAT_MODEL.md` #4)
-   after a live prompt-injection test got the LLM to report a bill amount
-   higher than the submitted `claim_amount`, which the engine then paid out.
+   submitted** — added during a security review after a live
+   prompt-injection test got the LLM to report a bill amount higher than
+   the submitted `claim_amount`, which the engine then paid out.
    The billed-total-vs-claim-amount check runs right after itemization,
    before any money is computed, and is itself fully deterministic — it
    doesn't try to make extraction trustworthy, it just refuses to let a
    mismatched number drive a payout.
+
+## Scope note: what this diagram does and doesn't cover
+
+Every limit, sub-limit, waiting period, exclusion, and copay/discount rate
+this flowchart references is read from whatever policy is currently active
+in `PolicyConfig` (admin-editable at `/admin/policy`), not necessarily the
+static `data/policy_terms.json` on disk — the two start out identical, but
+diverge the moment an admin saves an edit. The diagram's shape (which
+checks run, in what order) never changes; only the threshold *values* each
+node compares against can.
+
+The **appeals workflow** is deliberately not represented as a node here. It
+is a separate, post-decision process: a human administrator reviewing a
+`REJECTED`/`PARTIAL` claim and choosing to uphold or overturn it. An
+overturned appeal changes `Claim.status` but never re-runs or rewrites the
+engine's own decision above — the diagram describes how the *original*
+automated decision was reached, and that reasoning trail stays intact and
+visible regardless of what an appeal later does to the claim's outward
+status. See `docs/ASSUMPTIONS.md` #22-25 for the appeal-specific rules.

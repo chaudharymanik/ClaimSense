@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { extractFromFile, extractFromText } from "@/lib/llm/extraction";
+import { getCurrentPolicy } from "@/lib/db/policyConfig";
 import { adjudicate } from "@/lib/rules-engine/engine";
 import type { ClaimInput, Decision } from "@/lib/types";
 import type { ClaimSubmission } from "./schemas";
@@ -61,7 +62,7 @@ export async function processClaim(submission: ClaimSubmission): Promise<Process
   // None of these are user-submitted — they're all derived from real claim
   // history, since a fraudulent/careless claimant wouldn't self-report any
   // of them accurately.
-  const [previousClaimsSameDay, priorApprovedDecisions, duplicateClaim] = await Promise.all([
+  const [previousClaimsSameDay, priorApprovedDecisions, duplicateClaim, currentPolicy] = await Promise.all([
     // Fraud signal: other claims by the same member for the same treatment date.
     prisma.claim.count({
       where: { memberId: submission.member_id, treatmentDate, id: { not: claim.id } },
@@ -82,6 +83,9 @@ export async function processClaim(submission: ClaimSubmission): Promise<Process
       where: { memberId: submission.member_id, treatmentDate, claimAmount: submission.claim_amount, id: { not: claim.id } },
       select: { id: true },
     }),
+    // Admin-editable policy (falls back to the static POLICY constant if
+    // the database row doesn't exist) — see lib/db/policyConfig.ts.
+    getCurrentPolicy(),
   ]);
   const priorClaimsTotalYtd = priorApprovedDecisions.reduce((sum, d) => sum + (d.approvedAmount ?? 0), 0);
 
@@ -108,6 +112,7 @@ export async function processClaim(submission: ClaimSubmission): Promise<Process
   const decision = adjudicate(claimInput, {
     claimId: claim.id,
     medicalNecessitySignal: extraction.medicalNecessitySignal,
+    policy: currentPolicy,
   });
 
   await prisma.extractedData.create({

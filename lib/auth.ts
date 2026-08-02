@@ -3,6 +3,9 @@ import crypto from "crypto";
 export const SESSION_COOKIE_NAME = "claimsense_session";
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
 
+export const ADMIN_SESSION_COOKIE_NAME = "claimsense_admin_session";
+export const ADMIN_SESSION_MAX_AGE_SECONDS = 60 * 60 * 8; // 8 hours — shorter-lived than the demo session, since it grants a materially more consequential capability (editing policy, overriding decisions)
+
 function seed(): string {
   const value = process.env.AUTH_SEED;
   if (!value) {
@@ -13,6 +16,22 @@ function seed(): string {
 
 function hmac(label: string): string {
   return crypto.createHmac("sha256", seed()).update(label).digest("hex");
+}
+
+/**
+ * Deliberately a SEPARATE secret from AUTH_SEED, not a rotating/derived
+ * value — admin access (editing policy terms, overriding appeal decisions)
+ * is meaningfully more consequential than the demo login, so it needs its
+ * own credential that isn't shown anywhere and isn't guessable from
+ * anything the demo-login layer exposes. Only the project owner should
+ * ever know this value.
+ */
+function adminSecret(): string {
+  const value = process.env.ADMIN_PASSWORD;
+  if (!value) {
+    throw new Error("ADMIN_PASSWORD is not set");
+  }
+  return value;
 }
 
 function utcDateString(date: Date = new Date()): string {
@@ -43,4 +62,19 @@ export function todaysDemoPassword(): string {
  */
 export function expectedSessionToken(): string {
   return hmac("session");
+}
+
+/**
+ * Checks a submitted admin password against ADMIN_PASSWORD directly
+ * (there's no "displayed daily code" concept here — this credential is
+ * never shown anywhere, so a plain equality check is appropriate, unlike
+ * the demo password which is intentionally public).
+ */
+export function isCorrectAdminPassword(candidate: string): boolean {
+  return candidate === adminSecret();
+}
+
+/** Stateless for the same reason as expectedSessionToken() — no session store. */
+export function expectedAdminSessionToken(): string {
+  return crypto.createHash("sha256").update(adminSecret()).digest("hex");
 }

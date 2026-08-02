@@ -16,6 +16,12 @@ enum ClaimStatus {
   MANUAL_REVIEW
 }
 
+enum AppealStatus {
+  PENDING
+  UPHELD
+  OVERTURNED
+}
+
 model Claim {
   id             String      @id @default(cuid())
   memberId       String
@@ -33,6 +39,7 @@ model Claim {
 
   extractedData ExtractedData?
   decision      Decision?
+  appeal        Appeal?
 
   @@index([memberId])
   @@index([status])
@@ -70,4 +77,34 @@ model Decision {
   notes            String?
   nextSteps        String?
   createdAt        DateTime @default(now())
+}
+
+// One appeal per claim by design — keeps the workflow contained (no
+// multi-round appeal chains). The original Decision/ruleTrail is never
+// mutated; an appeal resolution is layered on top as its own record, so
+// the deterministic engine's original output stays a permanent, honest
+// audit trail even when an admin later overrides it.
+model Appeal {
+  id             String       @id @default(cuid())
+  claimId        String       @unique
+  claim          Claim        @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  reason         String
+  status         AppealStatus @default(PENDING)
+  resolutionNote String?
+  overrideAmount Int?
+  createdAt      DateTime     @default(now())
+  resolvedAt     DateTime?
+
+  @@index([status])
+}
+
+// Single-row table (fixed id) holding the editable policy configuration
+// that the rules engine reads at claim-processing time. Seeded from the
+// original policy_terms.json in this feature's migration. The engine falls
+// back to the static POLICY constant if this row is ever missing, so a
+// fresh/misconfigured database never breaks claim processing.
+model PolicyConfig {
+  id        String   @id @default("singleton")
+  data      Json
+  updatedAt DateTime @updatedAt
 }

@@ -23,12 +23,16 @@ skip scope or guess. Grouped by why the assumption was needed.
    read once at submission time for extraction, then discarded — only the
    extracted structured fields and the pasted-text fallback (if used) are
    stored. No Supabase Storage bucket was set up for this MVP.
-4. **No multi-policy support, no authentication, no admin dashboard, no
-   RAG/fine-tuning.** Single hardcoded policy (`policy_terms.json`), open
-   access, direct policy-as-context to the LLM. These were explicitly
-   out-of-scope calls in the original planning docs, consistent with the
-   assignment's own "prioritize core functionality" and "build an MVP, not
-   a perfect solution" guidance.
+4. **No multi-policy support, no RAG/fine-tuning.** Single policy
+   configuration (now admin-editable — see the "Bonus features" section
+   below — but still exactly one active policy, not per-organization or
+   versioned), direct policy-as-context to the LLM. These remain explicit
+   out-of-scope calls, consistent with the assignment's own "prioritize
+   core functionality" and "build an MVP, not a perfect solution" guidance.
+   (Authentication and an admin dashboard *were* originally out of scope
+   too, but were added later as bonus features once the deployed URL
+   needed some form of access control — see below and README's Known
+   Limitations for exactly what they do and don't protect against.)
 
 ## Inferred rules (not explicitly stated in adjudication_rules.md / policy_terms.json)
 
@@ -84,8 +88,9 @@ skip scope or guess. Grouped by why the assumption was needed.
     simulates one.** Plum's assignment package never provided actual HR
     data (only an aggregate `employees_covered: 500` count). Built a small
     seeded roster covering every member ID used across `test_cases.json`
-    and `docs/TEST_SCENARIOS.md` so `MEMBER_NOT_COVERED` is genuinely
-    enforced end-to-end (an ID not on the list is really rejected) rather
+    and the supplementary scenarios in `docs/USER_GUIDE.md` so
+    `MEMBER_NOT_COVERED` is genuinely enforced end-to-end (an ID not on
+    the list is really rejected) rather
     than only reachable via a test-only override flag. A real deployment
     would replace this file with an actual HR/roster integration — the
     check itself (`lib/rules-engine/roster.ts`) doesn't change.
@@ -161,3 +166,60 @@ skip scope or guess. Grouped by why the assumption was needed.
     keyword-based category classification), not reverse-engineered to
     match `test_cases.json`'s exact decimal values. The scoring rationale
     is documented in `lib/rules-engine/confidence.ts`.
+
+## Bonus features (appeals, admin policy config, AI accuracy metrics)
+
+22. **One appeal per claim, no multi-round appeal chains.** A claim that's
+    already been appealed can't be appealed again, resolved or not. This
+    keeps the workflow contained; a real production version might allow
+    re-appealing after new evidence, but that's a meaningfully bigger
+    feature (appeal history, versioned resolutions) than this scope calls
+    for.
+23. **Only `REJECTED` and `PARTIAL` claims are appealable.** `APPROVED` has
+    nothing to contest; `MANUAL_REVIEW` is already pending human attention
+    through the existing review queue, so a separate appeal on top of that
+    would be redundant rather than meaningful.
+24. **An appeal's `overrideAmount` can never exceed the claim's originally
+    submitted `claim_amount`.** Deliberately the same invariant as the
+    rules engine's own bill-vs-claim-amount reconciliation check
+    (`docs/DECISION_LOGIC.md`'s priority rules, #6 — added after a live
+    prompt-injection test) — an admin overturning a claim is still a
+    human decision, not automated, but
+    "never pay more than what was actually claimed" is a safety property
+    worth enforcing everywhere money can be approved, not just in the one
+    place it was originally found.
+25. **Overturning an appeal changes `Claim.status` but never touches the
+    original `Decision` row.** The rules engine's actual output stays a
+    permanent, unedited audit record forever; the override is a separate
+    layer on top, shown alongside it on the claim detail page. This was a
+    deliberate design choice, not an oversight — rewriting history would
+    undermine the "full rule-by-rule reasoning trail" transparency this
+    project has maintained since the original build.
+26. **Policy configuration is a single global row, not versioned or
+    per-organization.** `PolicyConfig` is one singleton database row;
+    editing it changes the policy for every claim submitted afterward,
+    with no history of previous values and no way to schedule a future
+    change. Existing claims and their decisions are never retroactively
+    recomputed against a new policy — a policy edit is prospective only.
+27. **The admin-editable policy falls back to the static
+    `policy_terms.json`-derived default if the database row is ever
+    missing** (a fresh database, or a deleted row) — the app never breaks
+    claim processing because of this bonus feature; it just behaves as if
+    no admin edit had ever been made.
+28. **A second, separate admin credential (`ADMIN_PASSWORD`), not the same
+    shared demo password.** Reusing the demo password (shown openly on
+    `/login` for any evaluator) for policy configuration and appeal
+    overrides would mean anyone with the link could silently change how
+    every claim gets adjudicated. The admin credential is static (not
+    rotating like the demo password), never displayed anywhere, and its
+    session cookie deliberately expires sooner (8 hours vs. the demo
+    session's 7 days) since it grants a more consequential capability. It
+    is still one shared secret, not per-admin accounts — see README's Known
+    Limitations.
+29. **AI accuracy metrics use fixed confidence-bucket thresholds (≥0.90
+    high, 0.70–0.89 good, 0.40–0.69 low, <0.40 illegible)**, not derived
+    from any provided data. The 0.40 boundary specifically matches the
+    existing `ILLEGIBLE_DOCUMENTS` cutoff (assumption #13 above) so the
+    dashboard's "illegible" bucket means the same thing the engine already
+    treats as illegible, rather than introducing a second, different
+    definition of the word.

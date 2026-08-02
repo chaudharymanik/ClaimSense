@@ -1,16 +1,20 @@
 import Link from "next/link";
 import TopNav from "@/components/TopNav";
-import { POLICY } from "@/lib/rules-engine/policy";
+import { getCurrentPolicy } from "@/lib/db/policyConfig";
+import type { PolicyTerms } from "@/lib/rules-engine/policy";
 
-// Everything on this page is read directly from policy_terms.json (same
-// POLICY object the rules engine itself uses) — never hardcoded separately,
-// so this page can't drift out of sync with what the engine actually
-// enforces. No per-request data, so this can be statically prerendered.
+export const dynamic = "force-dynamic";
+
+// Reads the SAME admin-editable policy the engine actually adjudicates
+// against (lib/db/policyConfig.ts), not a static import — otherwise this
+// page would silently drift out of sync the moment an admin changes
+// anything in /admin/policy, showing claimants coverage terms that no
+// longer match what claims actually get decided against.
 
 const CATEGORY_ROWS: Array<{
   label: string;
-  key: keyof typeof POLICY.coverage_details;
-  note?: (c: (typeof POLICY.coverage_details)["consultation_fees"]) => string;
+  key: keyof PolicyTerms["coverage_details"];
+  note?: (c: PolicyTerms["coverage_details"]["consultation_fees"]) => string;
 }> = [
   {
     label: "Doctor Consultation",
@@ -40,16 +44,17 @@ const CATEGORY_ROWS: Array<{
   },
 ];
 
-function preAuthTests(): string[] {
-  return POLICY.coverage_details.diagnostic_tests.covered_tests
+function preAuthTests(policy: PolicyTerms): string[] {
+  return policy.coverage_details.diagnostic_tests.covered_tests
     .filter((t) => t.includes("with pre-auth"))
     .map((t) => t.replace(/\s*\(with pre-auth\)/i, ""));
 }
 
-export default function CoverageGuidePage() {
+export default async function CoverageGuidePage() {
+  const POLICY = await getCurrentPolicy();
   const c = POLICY.coverage_details;
   const wp = POLICY.waiting_periods;
-  const preAuth = preAuthTests();
+  const preAuth = preAuthTests(POLICY);
 
   return (
     <div className="bg-background text-on-background font-body-md antialiased min-h-screen flex flex-col">

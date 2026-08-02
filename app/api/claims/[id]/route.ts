@@ -8,7 +8,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     const claim = await prisma.claim.findUnique({
       where: { id },
-      include: { extractedData: true, decision: true },
+      include: { extractedData: true, decision: true, appeal: true },
     });
 
     if (!claim) {

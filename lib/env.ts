@@ -1,4 +1,4 @@
-const REQUIRED_ENV_VARS = ["DATABASE_URL", "DIRECT_URL", "GEMINI_API_KEY", "AUTH_SEED"] as const;
+const REQUIRED_ENV_VARS = ["DATABASE_URL", "DIRECT_URL", "GEMINI_API_KEY", "AUTH_SEED", "ADMIN_PASSWORD"] as const;
 
 /**
  * Called once from instrumentation.ts's register() hook, which Next.js runs

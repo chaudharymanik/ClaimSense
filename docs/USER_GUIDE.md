@@ -34,10 +34,15 @@ of the scenarios below (or your own test data) — see the main
 
 All 15 were run against a live instance of the deployed rules engine and
 LLM extraction pipeline — not the automated test suite's fixture data. The
-automated suite (`npm test`, 43 tests) covers the rules engine in isolation
+automated suite (`npm test`, 44 tests) covers the rules engine in isolation
 plus these same 10 required scenarios and more; this document additionally
 confirms the *full* pipeline (document → AI extraction → adjudication →
 UI) end to end, the way an actual claimant would use it.
+
+Beyond the 15 required/supplementary scenarios above, this guide also
+covers the three bonus features built after the core assignment: **AI
+accuracy metrics**, the **appeals workflow**, and **admin-configurable
+policy** — see the dedicated section at the end.
 
 ---
 
@@ -152,3 +157,82 @@ one more ₹500 claim submitted.
 would push the year's total over ₹50,000.
 
 ![EX05](user-guide-screenshots/EX05.png)
+
+---
+
+# Bonus features
+
+Three of the six bonus items listed in the assignment brief were built:
+**AI accuracy metrics**, an **appeals workflow**, and **admin-configurable
+policy**. All three were live-verified the same way as every scenario
+above — real actions against a running instance, not mocked screenshots.
+
+## AI Extraction Accuracy
+
+A new section on the main dashboard (`/claims`) surfaces the LLM's own
+self-reported extraction confidence in aggregate: the average across every
+document processed, a four-bucket distribution (illegible / low / good /
+high), and how often low confidence actually routed a claim to manual
+review versus the document failing to extract at all. All of it is derived
+from data the app was already storing (`ExtractedData.extractionConfidence`,
+`Decision.flags`) — nothing new to collect, just surfaced. Labeled plainly
+as *"self-reported confidence, not verified against ground truth"* rather
+than implying more rigor than it has.
+
+![AI accuracy metrics](user-guide-screenshots/ai-accuracy-metrics.png)
+
+## Appeals Workflow
+
+A `REJECTED` or `PARTIAL` claim can be appealed with a short reason,
+directly from the claim detail page:
+
+![Appeal form](user-guide-screenshots/appeal-form.png)
+
+Once submitted, the appeal shows as pending review on the same page:
+
+![Appeal pending](user-guide-screenshots/appeal-pending.png)
+
+An administrator (a separate credential from the regular login — see
+below) reviews it in a dedicated queue at `/admin/appeals` and either
+upholds the original decision or overturns it with a note and an approved
+amount, capped at the claim's originally submitted amount:
+
+![Admin appeals queue](user-guide-screenshots/admin-appeals-queue.png)
+
+Overturning updates the claim's effective status to `Approved` — but the
+original rule-engine decision and its full trail are never rewritten; the
+override is layered on top as a permanent, separate record, visible
+alongside the original:
+
+![Appeal overturned, decision preserved](user-guide-screenshots/appeal-overturned.png)
+
+**Live-verified, not just built**: tried overturning with an amount above
+the submitted claim total first — correctly rejected before the real
+resolution went through — then resolved it for real with a valid amount.
+
+## Admin-Configurable Policy
+
+Coverage limits, copay/discount rates, waiting periods, exclusions, and the
+network hospital list are all editable at `/admin/policy` — no redeploy
+needed. This is the same data the rules engine actually reads for every
+claim (`lib/db/policyConfig.ts`), not a separate copy that could drift out
+of sync.
+
+![Admin policy configuration](user-guide-screenshots/admin-policy-config.png)
+
+**Live-verified that an edit actually changes engine behavior**, not just
+saves to an unread database row: lowered the per-claim limit through this
+form, resubmitted a claim that had approved moments before at the old
+limit, watched it correctly reject `PER_CLAIM_EXCEEDED` under the new one,
+then restored the original value.
+
+## A separate admin credential, on purpose
+
+All three `/admin/*` pages and their API routes require a second,
+independent login (`/admin/login`) — a static password (`ADMIN_PASSWORD`)
+distinct from the daily-rotating demo password, never displayed anywhere,
+required *on top of* the regular session, not instead of it. Editing policy
+or overturning a decision is a materially more consequential action than
+viewing or submitting a claim, so it has its own, stronger gate. Tested
+live: a session with only the regular login gets redirected away from
+every single admin route — page or API — with no exceptions.

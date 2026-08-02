@@ -24,6 +24,18 @@ Built for Plum's AI Automation Engineer intern assignment.
    rejection codes, and a full trail of which checks passed/failed and why.
    You can also ask a follow-up question about any decision and get an
    AI-generated explanation grounded in that claim's actual data.
+5. **Tracks its own AI accuracy** — the dashboard surfaces the LLM's
+   self-reported extraction confidence in aggregate (average, distribution,
+   how often low confidence routed a claim to manual review), not just
+   business-outcome analytics.
+6. **Supports appeals** — a rejected or partially-approved claim can be
+   appealed; an administrator reviews it separately from the regular flow
+   and can uphold or overturn it, with the original deterministic decision
+   always kept intact as the permanent audit record.
+7. **Has admin-configurable policy** — coverage limits, copay/discount
+   rates, exclusions, waiting periods, and the network hospital list all
+   live in the database and are editable from a separate admin area, not
+   hardcoded — changes apply to every claim submitted afterward.
 
 ## Documentation
 
@@ -72,6 +84,10 @@ cp .env.example .env
   `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
   Powers the demo login gate (see "Known limitations" below) — not itself a
   password, just the seed the daily password is derived from.
+- `ADMIN_PASSWORD` — any random string, generate one with
+  `node -e "console.log(require('crypto').randomBytes(12).toString('base64url'))"`.
+  A separate, static credential (unlike `AUTH_SEED`, never displayed
+  anywhere) gating `/admin` — policy configuration and appeal resolution.
 
 ### Set up the database
 
@@ -95,7 +111,7 @@ npm run build    # type-check + production build
 npm run lint     # ESLint
 ```
 
-43 tests, all passing, no external calls required (the rules-engine tests
+44 tests, all passing, no external calls required (the rules-engine tests
 use pre-extracted fixture data directly, bypassing the LLM entirely, per
 the assignment's own test case format).
 
@@ -138,6 +154,13 @@ notable ones:
   specifically, so each claims adjuster has their own identity, and access
   and actions are scoped and audited per person rather than shared behind
   one credential.
+- **Appeals and admin actions inherit the same shared-login limitation.**
+  Any logged-in demo user can appeal any claim (there's no per-claimant
+  identity to restrict it to "your own" claims), and policy configuration /
+  appeal resolution require a second, separate admin credential
+  (`ADMIN_PASSWORD`) — but that credential is still one shared secret, not
+  per-admin accounts. A real deployment would tie both to the same
+  per-user/per-organization identity system noted above.
 - **LLM extraction signals (`extraction_confidence`,
   `medical_necessity.necessary`) are self-reported by the model and are
   themselves promptable** — a crafted document could attempt to suppress

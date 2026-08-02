@@ -4,8 +4,11 @@ import { prisma } from "@/lib/db/prisma";
 import TopNav from "@/components/TopNav";
 import StatusPill from "@/components/StatusPill";
 import AskAboutDecision from "@/components/AskAboutDecision";
+import AppealSection from "@/components/AppealSection";
 import { rejectionCodeLabel } from "@/lib/rejectionCodeLabels";
 import type { RuleTrailItem } from "@/lib/types";
+
+const APPEALABLE_STATUSES = ["REJECTED", "PARTIAL"] as const;
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +20,7 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const claim = await prisma.claim.findUnique({
     where: { id },
-    include: { extractedData: true, decision: true },
+    include: { extractedData: true, decision: true, appeal: true },
   });
 
   if (!claim) notFound();
@@ -25,6 +28,10 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
   const decision = claim.decision;
   const trail = (decision?.ruleTrail as unknown as RuleTrailItem[] | undefined) ?? [];
   const confidencePct = decision ? Math.round(decision.confidenceScore * 100) : null;
+  // The effective status can differ from the original decision.decision
+  // after an appeal overturns it — claim.status is the one that's kept in
+  // sync, decision.decision stays the original engine output forever.
+  const appealable = APPEALABLE_STATUSES.includes(claim.status as (typeof APPEALABLE_STATUSES)[number]) && !claim.appeal;
 
   return (
     <div className="font-body-md text-on-surface flex flex-col min-h-screen bg-surface-bright">
@@ -34,8 +41,7 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
           <h1 className="font-display-lg text-display-lg text-on-surface">
             Claim #{claim.id.slice(-8).toUpperCase()}
           </h1>
-          {decision && <StatusPill status={decision.decision} />}
-          {!decision && <StatusPill status="PROCESSING" />}
+          <StatusPill status={claim.status} />
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-gutter-grid">
@@ -124,6 +130,24 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
         </div>
 
         {decision && <FinalDecisionSection decision={decision} claimId={claim.id} />}
+        {decision && (
+          <AppealSection
+            claimId={claim.id}
+            appealable={appealable}
+            appeal={
+              claim.appeal
+                ? {
+                    id: claim.appeal.id,
+                    reason: claim.appeal.reason,
+                    status: claim.appeal.status,
+                    resolutionNote: claim.appeal.resolutionNote,
+                    overrideAmount: claim.appeal.overrideAmount,
+                    createdAt: claim.appeal.createdAt.toISOString(),
+                  }
+                : null
+            }
+          />
+        )}
         {decision && <AskAboutDecision claimId={claim.id} />}
       </main>
     </div>
