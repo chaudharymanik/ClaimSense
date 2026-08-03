@@ -39,6 +39,10 @@ export async function processClaim(submission: ClaimSubmission): Promise<Process
     : await extractFromText(submission.document_text!);
 
   if (!extraction.success) {
+    // extraction.reason is an internal diagnostic string (timeouts, schema
+    // validation failures, etc.) — log it for debugging, never show it to
+    // the claimant. The trail/notes get a clean, human-facing message instead.
+    console.error(`Extraction failed for claim ${claim.id}: ${extraction.reason}`);
     const decision: Decision = {
       claim_id: claim.id,
       decision: "MANUAL_REVIEW",
@@ -47,9 +51,15 @@ export async function processClaim(submission: ClaimSubmission): Promise<Process
       rejected_items: [],
       flags: ["Document extraction failed"],
       confidence_score: 0,
-      notes: extraction.reason,
+      notes: "The submitted document couldn't be read automatically.",
       next_steps: "Claims ops team will review the submitted document manually.",
-      trail: [{ step: "Document Extraction", passed: false, message: extraction.reason }],
+      trail: [
+        {
+          step: "Document Extraction",
+          passed: false,
+          message: "The submitted document couldn't be processed automatically.",
+        },
+      ],
     };
     await saveDecision(claim.id, decision);
     return { claimId: claim.id, decision };

@@ -48,7 +48,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     );
 
     if (!result.success) {
-      return NextResponse.json({ error: result.reason }, { status: 502 });
+      // result.reason is an internal diagnostic string (timeouts, empty
+      // model response, etc.) — log it for debugging, never return it to
+      // the caller.
+      console.error(`Ask-about-decision failed for claim ${id}: ${result.reason}`);
+      return NextResponse.json(
+        { error: "Couldn't generate an explanation right now. Please try again." },
+        { status: 502 },
+      );
     }
     return NextResponse.json({ answer: result.answer });
   } catch (err) {
