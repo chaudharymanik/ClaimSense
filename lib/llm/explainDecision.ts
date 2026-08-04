@@ -1,4 +1,4 @@
-import { getClient, withTimeout, MODEL } from "./client";
+import { getClient, withTimeout, MODEL, FALLBACK_MODEL } from "./client";
 import { redactSecrets } from "@/lib/redact";
 import type { Decision } from "@/lib/types";
 
@@ -33,11 +33,18 @@ ${JSON.stringify({ memberName: context.memberName, claimAmount: context.claimAmo
 
 Question: ${trimmed}`;
 
+  const primary = await askOnce(prompt, MODEL);
+  if (primary.success) return primary;
+  return askOnce(prompt, FALLBACK_MODEL);
+}
+
+/** One attempt against a specific model. Never throws — always resolves to a result. */
+async function askOnce(prompt: string, model: string): Promise<ExplainResult> {
   try {
     const ai = getClient();
     const response = await withTimeout(
       ai.models.generateContent({
-        model: MODEL,
+        model,
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         config: { temperature: 0.2 },
       }),

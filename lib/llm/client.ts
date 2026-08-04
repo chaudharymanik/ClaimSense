@@ -7,6 +7,11 @@ import { GoogleGenAI } from "@google/genai";
 // quota is tracked per-model-per-project, so this is also a completely
 // separate quota bucket from whatever gemini-flash-latest already used today.
 export const MODEL = process.env.GEMINI_MODEL ?? "gemini-flash-lite-latest";
+// Used only if a MODEL call fails (timeout, API error, empty/invalid
+// response) — a different model family so a single model having a bad
+// moment (rate limit, temporary outage) doesn't take down extraction
+// entirely. Configurable for the same reason MODEL is.
+export const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL ?? "gemini-3.5-flash-lite";
 export const DEFAULT_TIMEOUT_MS = 20_000;
 
 export function getClient(): GoogleGenAI {

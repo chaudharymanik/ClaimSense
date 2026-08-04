@@ -1,7 +1,7 @@
 import { Type, type Schema } from "@google/genai";
 import type { BillDoc, ClaimDocuments, PrescriptionDoc } from "@/lib/types";
 import type { MedicalNecessitySignal } from "@/lib/rules-engine/medicalNecessity";
-import { getClient, withTimeout, MODEL } from "./client";
+import { getClient, withTimeout, MODEL, FALLBACK_MODEL } from "./client";
 import { ExtractionResponseSchema, type ExtractionResponse } from "./schemas";
 import { redactSecrets } from "@/lib/redact";
 
@@ -161,18 +161,13 @@ function toResult(parsed: ExtractionResponse): ExtractionResult {
   };
 }
 
-/**
- * Any failure here (API error, timeout, malformed/invalid JSON) is caught
- * and returned as `{ success: false }` rather than thrown — per Rules.md,
- * the caller (Phase 3's API route) must route these to MANUAL_REVIEW
- * instead of crashing or guessing.
- */
-async function runExtraction(contents: unknown): Promise<ExtractionResult> {
+/** One attempt against a specific model. Never throws — always resolves to a result. */
+async function runExtractionOnce(contents: unknown, model: string): Promise<ExtractionResult> {
   try {
     const ai = getClient();
     const response = await withTimeout(
       ai.models.generateContent({
-        model: MODEL,
+        model,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         contents: contents as any,
         config: {
@@ -199,6 +194,20 @@ async function runExtraction(contents: unknown): Promise<ExtractionResult> {
     const message = err instanceof Error ? err.message : String(err);
     return { success: false, reason: redactSecrets(`extraction_failed: ${message}`) };
   }
+}
+
+/**
+ * Tries MODEL first, then FALLBACK_MODEL once if that fails for any reason
+ * (API error, timeout, malformed/invalid JSON) — a single model having a bad
+ * moment (rate limit, temporary outage) shouldn't take down extraction
+ * entirely. Only if both fail does this return `{ success: false }`; per
+ * Rules.md, the caller (Phase 3's API route) must then route to
+ * MANUAL_REVIEW instead of crashing or guessing.
+ */
+async function runExtraction(contents: unknown): Promise<ExtractionResult> {
+  const primary = await runExtractionOnce(contents, MODEL);
+  if (primary.success) return primary;
+  return runExtractionOnce(contents, FALLBACK_MODEL);
 }
 
 export async function extractFromText(documentText: string): Promise<ExtractionResult> {
